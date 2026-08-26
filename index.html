@@ -4469,6 +4469,44 @@ body.sessionChecking:not(.appLogged) #appView{
 
 </style>
 
+<script>
+// Mengubah google.script.run menjadi pemanggil API Vercel internal
+window.google = {
+  script: {
+    run: new Proxy({}, {
+      get: function(target, propKey) {
+        if (propKey === 'withSuccessHandler') {
+          return function(callback) { target.onSuccess = callback; return window.google.script.run; };
+        }
+        if (propKey === 'withFailureHandler') {
+          return function(callback) { target.onFailure = callback; return window.google.script.run; };
+        }
+        
+        return async function(...args) {
+          try {
+            // Memanggil file backend.js di Vercel
+            const response = await fetch('/api/backend', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ functionName: propKey, args: args })
+            });
+            
+            const result = await response.json();
+            if (!response.ok || result.error) throw new Error(result.error || 'Terjadi kesalahan server');
+            if (target.onSuccess) target.onSuccess(result.data);
+          } catch (error) {
+            if (target.onFailure) target.onFailure(error);
+            else console.error("API Error:", error);
+          } finally {
+            target.onSuccess = null; target.onFailure = null;
+          }
+        };
+      }
+    })
+  }
+};
+</script>
+     
 </head>
 
 <body class="sessionChecking">
