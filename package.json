@@ -1,0 +1,7 @@
+{
+  "name": "sipasin-vercel",
+  "scripts": { "start": "node api/gas.js" },
+  "dependencies": {
+    "googleapis": "^126.0.0"
+  }
+}
